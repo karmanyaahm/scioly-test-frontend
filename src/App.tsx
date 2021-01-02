@@ -1,26 +1,76 @@
-import React from 'react';
-import logo from './logo.svg';
+import * as React from 'react';
+// import logo from './logo.svg';
 import './App.css';
+import Picker from './Config';
+import Table from './Table';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+interface RealData {
+  types: Map<[a: string], Map<[b: string], number | string>>;
+  values: [{ [n: string]: string | number }];
+}
+async function getData(): Promise<RealData> {
+  // const res = await fetch('./data/data.json');
+  // const data = await res.json();
+  // return data;
+  return parseData({
+    types: {
+      location: {
+        location_a: "Location A",
+        location_b: "Location B",
+        location_c: "Location C",
+      },
+      event: {
+        anatomy_and_physiology: "Anatomy and Physiology",
+        detector_building: "Detector Building",
+        expd: "Experimental Design",
+      },
+      year: { '2019': 2019, "2020": 2020 },
+    },
+    values: [
+      { location: "location_a", event: "anatomy_and_physiology", year: 2020, url: "https://drive.google.com" },
+      { location: "location_a", event: "expd", year: 2021, url: "https://drive.google.com" }
+
+    ]
+  });
+}
+async function parseData(p: any): Promise<RealData> {
+  p.types = new Map(Object.keys(p.types).map(key => [key, new Map(Object.keys(p.types[key]).map(ke => [ke, p.types[key][ke]]))]));
+  // more parsing todo
+  return p;
+}
+class App extends React.Component {
+  state: any = {
+    types: new Map<string, Map<string, number | string>>(),
+    values: [],
+    displayVals: [],
+  };
+
+
+  componentDidMount() {
+    getData().then(data => {
+
+      this.setState({
+        types: data.types,
+        values: data.values,
+        displayVals: data.values,
+      });
+
+    });
+  }
+  reRenderTable(st: { [s: string]: number[] | string[] }) {
+    console.log("now");
+  }
+  render() {
+    console.log(this.state.values)
+    return (
+      <div className="App">
+        {/* <pre>{JSON.stringify(fruits)}</pre> */}
+        {/* <Picker typeconfig={this.state.types} reRender={this.reRenderTable} /> */}
+        <Table data={this.state.values} />
+      </div>
+    );
+  }
 }
 
 export default App;
