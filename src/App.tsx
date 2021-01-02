@@ -10,9 +10,22 @@ interface RealData {
   values: [{ [n: string]: string | number }];
 }
 async function getData(): Promise<RealData> {
-  // const res = await fetch('./data/data.json');
-  // const data = await res.json();
-  // return data;
+  const res = await fetch('./t.json');
+  const data = await res.json();
+  return parseData({
+    types: {
+      location: {
+        location_a: "Location A",
+        location_b: "Location B",
+        location_c: "Location C",
+      },
+      event: {
+        anatomy_and_physiology: "Anatomy and Physiology",
+        detector_building: "Detector Building",
+        expd: "Experimental Design",
+      },
+    }, values: data
+  }); 
   return parseData({
     types: {
       location: {
@@ -43,7 +56,6 @@ class App extends React.Component {
   state: any = {
     types: new Map<string, Map<string, number | string>>(),
     values: [],
-    displayVals: [],
   };
 
 
@@ -53,7 +65,6 @@ class App extends React.Component {
       this.setState({
         types: data.types,
         values: data.values,
-        displayVals: data.values,
       });
 
     });

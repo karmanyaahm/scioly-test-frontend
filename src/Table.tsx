@@ -1,44 +1,45 @@
-//@ts-nocheck
-//@ts-ignore
+// @ts-nocheck
+// @ts-ignore
 
 
 import * as React from 'react';
-import { Dropdown2 } from './Config';
-// import { Dropdown2 } from 'react-multi-select-component';
-// import styled from 'styled-components';
-import { useTable, useFilters, useGlobalFilter, useAsyncDebounce, Row } from 'react-table';
+import { Dropdown } from './Config';
+import styled from 'styled-components';
+import { useTable, useFilters, useSortBy, useGlobalFilter, useAsyncDebounce, Row, usePagination } from 'react-table';
+import { Z_BLOCK } from 'zlib';
 // A great library for fuzzy filtering/sorting items
 // import matchSorter from 'match-sorter';
 
 
-// const Styles = styled.div`
-//   padding: 1rem;
+const Styles = styled.div`
+  padding: 1rem;
 
-//   table {
-//     border-spacing: 0;
-//     border: 1px solid black;
+  table {
+    border-spacing: 0;
+    border: 1px solid black;
 
-//     tr {
-//       :last-child {
-//         td {
-//           border-bottom: 0;
-//         }
-//       }
-//     }
+    tr {
+      :last-child {
+        td {
+          border-bottom: 0;
+        }
+      }
+    }
 
-//     th,
-//     td {
-//       margin: 0;
-//       padding: 0.5rem;
-//       border-bottom: 1px solid black;
-//       border-right: 1px solid black;
+    th,
+    td {
 
-//       :last-child {
-//         border-right: 0;
-//       }
-//     }
-//   }
-// `
+      margin: 0;
+      padding: 0.5rem;
+      border-bottom: 1px solid black;
+      border-right: 1px solid black;
+
+      :last-child {
+        border-right: 0;
+      }
+    }
+  }
+`
 
 // Define a default UI for filtering
 
@@ -90,8 +91,6 @@ function DefaultColumnFilter({
 function SelectColumnFilter({
     column: { filterValue, setFilter, preFilteredRows, id },
 }) {
-    // Calculate the options for filtering
-    // using the preFilteredRows
     const options = React.useMemo(() => {
         const options = new Set()
         preFilteredRows.forEach(row => {
@@ -102,7 +101,7 @@ function SelectColumnFilter({
 
     return (
         // <div />
-        <Dropdown2
+        <Dropdown
             title={id}
             selected={filterValue || []}
             options={options}
@@ -115,9 +114,6 @@ function SelectColumnFilter({
     )
 }
 
-// This is a custom UI for our 'between' or number range
-// filter. It uses two number boxes and filters rows to
-// ones that have values between the two
 function NumberRangeColumnFilter({
     column: { filterValue = [], preFilteredRows, setFilter, id },
 }) {
@@ -215,6 +211,14 @@ function Tablee({ columns, data }) {
         visibleColumns,
         preGlobalFilteredRows,
         setGlobalFilter,
+        pageOptions,
+        page, state: { pageIndex, pageSize },
+        gotoPage,
+        previousPage,
+        nextPage,
+        setPageSize,
+        canPreviousPage,
+        canNextPage, pageCount,
     } = useTable(
         {
             columns,
@@ -223,12 +227,13 @@ function Tablee({ columns, data }) {
             filterTypes,
         },
         useFilters, // useFilters!
-        useGlobalFilter // useGlobalFilter!
+        useGlobalFilter, // useGlobalFilter!,
+        useSortBy, usePagination,
+
     )
 
     // We don't want to render all of the rows for this example, so cap
     // it for this use case
-    const firstPageRows = rows.slice(0, 10)
 
     return (
         <>
@@ -237,8 +242,11 @@ function Tablee({ columns, data }) {
                     {headerGroups.map(headerGroup => (
                         <tr {...headerGroup.getHeaderGroupProps()}>
                             {headerGroup.headers.map(column => (
-                                <th {...column.getHeaderProps()}>
+                                <th {...column.getHeaderProps(column.getSortByToggleProps())}>
                                     {column.render('Header')}
+                                    <span>
+                                        {column.isSorted ? (column.isSortedDesc ? ' 🔽' : ' 🔼') : ''}
+                                    </span>
                                     {/* Render the columns filter UI */}
                                     <div>{column.canFilter ? column.render('Filter') : null}</div>
                                 </th>
@@ -261,7 +269,7 @@ function Tablee({ columns, data }) {
                     </tr>
                 </thead>
                 <tbody {...getTableBodyProps()}>
-                    {firstPageRows.map((row, i) => {
+                    {page.map((row, i) => {
                         prepareRow(row)
                         return (
                             <tr {...row.getRowProps()}>
@@ -273,13 +281,51 @@ function Tablee({ columns, data }) {
                     })}
                 </tbody>
             </table>
-            <br />
-            <div>Showing the first 20 results of {rows.length} rows</div>
-            <div>
-                <pre>
-                    <code>{JSON.stringify(state.filters, null, 2)}</code>
-                </pre>
+            <div className="pagination">
+                <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
+                    {'<<'}
+                </button>{' '}
+                <button onClick={() => previousPage()} disabled={!canPreviousPage}>
+                    {'<'}
+                </button>{' '}
+                <button onClick={() => nextPage()} disabled={!canNextPage}>
+                    {'>'}
+                </button>{' '}
+                <button onClick={() => gotoPage(pageCount - 1)} disabled={!canNextPage}>
+                    {'>>'}
+                </button>{' '}
+                <span>
+                    Page{' '}
+                    <strong>
+                        {pageIndex + 1} of {pageOptions.length}
+                    </strong>{' '}
+                </span>
+                <span>
+                    | Go to page:{' '}
+                    <input
+                        type="number"
+                        defaultValue={pageIndex + 1}
+                        onChange={e => {
+                            const page = e.target.value ? Number(e.target.value) - 1 : 0
+                            gotoPage(page)
+                        }}
+                        style={{ width: '100px' }}
+                    />
+                </span>{' '}
+                <select
+                    value={pageSize}
+                    onChange={e => {
+                        setPageSize(Number(e.target.value))
+                    }}
+                >
+                    {[10, 25, 50, 250, 500, 999999].map(pageSize => (
+                        <option key={pageSize} value={pageSize}>
+                            Show {pageSize}
+                        </option>
+                    ))}
+                </select>
             </div>
+
         </>
     )
 }
@@ -298,51 +344,15 @@ function filterGreaterThan(rows, id, filterValue) {
 // check, but here, we want to remove the filter if it's not a number
 filterGreaterThan.autoRemove = val => typeof val !== 'number'
 
-// function multipleStringsIn(rows: Array<Row>, columnIds: Array<String>, filterValue: String[]) {//TODO: memo
-//     if (!(filterValue && filterValue.length > 0)) return rows;
-//     var rowss = [];
-//     console.log("these");
-//     console.log(rows)
-//     console.log(columnIds)
-//     console.log(filterValue)
-//     rows.forEach((row) => {
-//         if (filterValue.includes(row.values[columnIds[0]])) {
-//             rowss.push(row)
-//         }
-//     })
-//     return rowss;
-// }
-
 function Table(idata: any) {
-    // const columns = React.useMemo(() => [
-    //     {
-    //         Header: 'Age',
-    //         accessor: 'age',
-    //         Filter: NumberRangeColumnFilter,
-    //         filter: 'between',
-    //     },
-    //     {
-    //         Header: 'Visits',
-    //         accessor: 'visits',
-    //         Filter: NumberRangeColumnFilter,
-    //         filter: 'between',
-    //     },
-    //     {
-    //         Header: 'Status',
-    //         accessor: 'status',
-    //         Filter: SelectColumnFilter,
-    //         filter: 'includesValue',
-    //     },
-    //     {
-    //         Header: 'URL',
-    //         accessor: 'url',
-    //     },
-    // ], [])
     const columns = React.useMemo(() => [
-      
+
         {
-            Header: 'Locations',
-            accessor: 'location', 
+            Header: () => <span style={{
+                width: "269px",
+                display: "inline-block",
+            }}>Locations</span>,
+            accessor: 'location',
             Filter: SelectColumnFilter,
             filter: 'includesValue',
         },
@@ -360,7 +370,14 @@ function Table(idata: any) {
         },
         {
             Header: 'URL',
-            accessor: 'url',
+            accessor: 'URL',
+            Cell: props => {
+                // console.log(props)
+                if (props.value)
+                    return <a href={props.value} target="_blank" rel="noreferrer noopener">View test</a>
+                else
+                    return null
+            },
         },
     ], [])
     // dataa = React.useMemo(() => {
@@ -369,9 +386,9 @@ function Table(idata: any) {
     const dataa = idata.data || [];
     console.log(dataa)
     return (
-        // <Styles>
-        <Tablee columns={columns} data={dataa} />
-        // {/* </Styles> */}
+        <Styles>
+            <Tablee columns={columns} data={dataa} />
+        </Styles>
     )
 }
 
