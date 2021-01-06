@@ -379,6 +379,12 @@ function Table(idata: any) {
                     return null
             },
         },
+{
+Header: 'Division',
+accessor:'div',
+Filter: SelectColumnFilter,
+filter: 'includesValue',
+}
     ], [])
     // dataa = React.useMemo(() => {
     //     return idata || [];

@@ -27,28 +27,15 @@ async function getData(): Promise<RealData> {
     }, values: data
   }); 
   return parseData({
-    types: {
-      location: {
-        location_a: "Location A",
-        location_b: "Location B",
-        location_c: "Location C",
-      },
-      event: {
-        anatomy_and_physiology: "Anatomy and Physiology",
-        detector_building: "Detector Building",
-        expd: "Experimental Design",
-      },
-      year: { '2019': 2019, "2020": 2020 },
-    },
-    values: [
-      { location: "location_a", event: "anatomy_and_physiology", year: 2020, url: "https://drive.google.com" },
-      { location: "location_a", event: "expd", year: 2021, url: "https://drive.google.com" }
+        values: [
+      { location: "location_a", div: "c", event: "anatomy_and_physiology", year: 2020, url: "https://drive.google.com" },
+      { location: "location_a", div: "b",  event: "expd", year: 2021, url: "https://drive.google.com" }
 
     ]
   });
 }
 async function parseData(p: any): Promise<RealData> {
-  p.types = new Map(Object.keys(p.types).map(key => [key, new Map(Object.keys(p.types[key]).map(ke => [ke, p.types[key][ke]]))]));
+ // p.types = new Map(Object.keys(p.types).map(key => [key, new Map(Object.keys(p.types[key]).map(ke => [ke, p.types[key][ke]]))]));
   // more parsing todo
   return p;
 }
